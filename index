@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton's Second Law - Manufacturing Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #container {
+            width: 800px;
+            height: 400px;
+            border: 1px solid #ccc;
+            position: relative;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+        #machine-part {
+            width: 100px;
+            height: 70px;
+            background-color: #8EB1C7;
+            position: absolute;
+            bottom: 50px;
+            left: 350px;
+            transition: left 0.5s ease-out;
+        }
+        .force-arrow {
+            position: absolute;
+            height: 3px;
+            bottom: 85px;
+            background-color: #D67D3E;
+            transition: width 0.3s ease-out;
+        }
+        .force-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -7px;
+            border-left: 14px solid #D67D3E;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+        #controls {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e0f7fa;
+            border-radius: 5px;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #0277bd;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #01579b;
+        }
+        #motion-path {
+            position: absolute;
+            height: 2px;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            background-color: #555;
+        }
+        .position-marker {
+            position: absolute;
+            bottom: 45px;
+            width: 2px;
+            height: 10px;
+            background-color: #333;
+        }
+        #title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title">Newton's Second Law (F = ma) - Manufacturing Application</h1>
+    
+    <div id="container">
+        <div id="motion-path"></div>
+        <div class="position-marker" style="left: 100px;"></div>
+        <div class="position-marker" style="left: 700px;"></div>
+        <div id="machine-part">
+            <div style="text-align: center; line-height: 70px; font-weight: bold;" id="mass-display">5 kg</div>
+        </div>
+        <div id="force-arrow" class="force-arrow" style="left: 250px; width: 100px;"></div>
+        <div style="position: absolute; bottom: 10px; left: 100px;">Position: <span id="position-display">0.0</span> m</div>
+        <div style="position: absolute; bottom: 10px; right: 100px;">Time: <span id="time-display">0.0</span> s</div>
+    </div>
+    
+    <div id="controls">
+        <div>
+            <label for="force-input">Force (N):</label>
+            <input type="range" id="force-input" min="10" max="200" value="50" step="10">
+            <span id="force-value">50 N</span>
+        </div>
+        <div>
+            <label for="mass-input">Mass (kg):</label>
+            <input type="range" id="mass-input" min="1" max="20" value="5" step="1">
+            <span id="mass-value">5 kg</span>
+        </div>
+        <button id="simulate-btn">Run Simulation</button>
+        <button id="reset-btn">Reset</button>
+    </div>
+    
+    <div id="results">
+        <h3>Analysis Results</h3>
+        <p>Acceleration (a = F/m): <span id="acceleration-result">10.0</span> m/s²</p>
+        <p>Distance traveled in 2 seconds: <span id="distance-result">20.0</span> m</p>
+        <p>Final velocity: <span id="velocity-result">20.0</span> m/s</p>
+    </div>
+
+    <script>
+        // Elements
+        const machinePart = document.getElementById('machine-part');
+        const forceArrow = document.getElementById('force-arrow');
+        const forceInput = document.getElementById('force-input');
+        const massInput = document.getElementById('mass-input');
+        const forceValue = document.getElementById('force-value');
+        const massValue = document.getElementById('mass-value');
+        const massDisplay = document.getElementById('mass-display');
+        const simulateBtn = document.getElementById('simulate-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const accelerationResult = document.getElementById('acceleration-result');
+        const distanceResult = document.getElementById('distance-result');
+        const velocityResult = document.getElementById('velocity-result');
+        const positionDisplay = document.getElementById('position-display');
+        const timeDisplay = document.getElementById('time-display');
+        
+        // Variables
+        let force = 50;
+        let mass = 5;
+        let acceleration = force / mass;
+        let isSimulating = false;
+        let startTime = 0;
+        let animationFrameId = null;
+        let startPosition = 350;
+        
+        // Update values
+        function updateValues() {
+            force = parseInt(forceInput.value);
+            mass = parseInt(massInput.value);
+            acceleration = force / mass;
+            
+            forceValue.textContent = force + ' N';
+            massValue.textContent = mass + ' kg';
+            massDisplay.textContent = mass + ' kg';
+            
+            // Update force arrow size (scaled for visualization)
+            const arrowWidth = Math.min(150, force);
+            forceArrow.style.width = arrowWidth + 'px';
+            
+            // Update results
+            accelerationResult.textContent = acceleration.toFixed(1);
+            const time = 2; // Fixed time for calculations
+            const distance = 0.5 * acceleration * time * time;
+            distanceResult.textContent = distance.toFixed(1);
+            velocityResult.textContent = (acceleration * time).toFixed(1);
+        }
+        
+        // Animation function
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsedTime = (timestamp - startTime) / 1000; // Convert to seconds
+            
+            if (elapsedTime > 3) { // Stop after 3 seconds
+                isSimulating = false;
+                return;
+            }
+            
+            // Calculate new position using physics equation: s = 0.5 * a * t²
+            const pixelsPerMeter = 100; // Scale factor
+            const distance = 0.5 * acceleration * elapsedTime * elapsedTime;
+            const newPosition = startPosition + (distance * pixelsPerMeter);
+            
+            // Update machine part position
+            machinePart.style.left = newPosition + 'px';
+            
+            // Update displays
+            positionDisplay.textContent = (distance).toFixed(2);
+            timeDisplay.textContent = elapsedTime.toFixed(1);
+            
+            // Continue animation
+            if (isSimulating) {
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // Start simulation
+        function startSimulation() {
+            if (isSimulating) return;
+            
+            isSimulating = true;
+            startTime = 0;
+            startPosition = 350; // Reset start position
+            machinePart.style.left = startPosition + 'px';
+            animationFrameId = requestAnimationFrame(animate);
+        }
+        
+        // Reset simulation
+        function resetSimulation() {
+            isSimulating = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            machinePart.style.left = startPosition + 'px';
+            positionDisplay.textContent = '0.0';
+            timeDisplay.textContent = '0.0';
+        }
+        
+        // Event listeners
+        forceInput.addEventListener('input', updateValues);
+        massInput.addEventListener('input', updateValues);
+        simulateBtn.addEventListener('click', startSimulation);
+        resetBtn.addEventListener('click', resetSimulation);
+        
+        // Initialize
+        updateValues();
+    </script>
+</body>
+</html>
